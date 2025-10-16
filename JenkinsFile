@@ -37,7 +37,7 @@ pipeline {
     stage('Apply') {
       when { expression { return params.APPLY } }
       steps {
-        input 'Approve apply?'
+        
         withCredentials([usernamePassword(
             credentialsId: 'aws-cred', 
             usernameVariable: 'AWS_ACCESS_KEY_ID', 
