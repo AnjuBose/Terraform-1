@@ -1,66 +1,56 @@
 pipeline {
-    agent any
+  agent any
  
-    environment {
-        withCredentials([usernamePassword(credentialsId: 'aws-creds',
-        usernameVariable= 'AWS_ACCESS_KEY_ID',
-        passwordVariable= 'AWS_SECRET_ACCESS_KEY')]) 
-    }
-    
-
+  environment {
+    AWS_DEFAULT_REGION = 'ap-south-1'   // plain env var OK here
+  }
  
-    stages {
-        stage('Checkout') {
-            steps {
-                echo 'Cloning repository...'
-                checkout scm
-            }
-        }
+  parameters {
+    booleanParam(name: 'APPLY', defaultValue: true, description: 'Run apply?')
+  }
  
-        stage('Terraform Init') {
-            steps {
-                sh 'terraform init -input=false'
-            }
-        }
- 
-        stage('Terraform Validate') {
-            steps {
-                sh 'terraform validate'
-            }
-        }
- 
-        stage('Terraform Plan') {
-            steps {
-                sh 'terraform plan -out=tfplan'
-            }
-        }
- 
-        stage('Terraform Apply') {
-            when {
-                expression { return params.APPLY == true }
-            }
-            steps {
-                input message: 'Approve deployment?', ok: 'Deploy'
-                sh 'terraform apply -auto-approve tfplan'
-            }
-        }
- 
-        stage('Terraform Destroy') {
-            when {
-                expression { return params.DESTROY == true }
-            }
-            steps {
-                input message: 'Approve destroy?', ok: 'Destroy'
-                sh 'terraform destroy -auto-approve'
-            }
-        }
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
  
-    post {
-        always {
-            echo 'Cleaning up workspace...'
-            cleanWs()
+    stage('Init & Plan') {
+      steps {
+        // withCredentials is a step — must be inside steps { }
+        withCredentials([usernamePassword(
+            credentialsId: 'aws-creds', 
+            usernameVariable: 'AWS_ACCESS_KEY_ID', 
+            passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+ 
+          sh '''
+            echo "Using AWS ID: $AWS_ACCESS_KEY_ID"
+            terraform init -input=false -reconfigure
+            terraform validate
+            terraform plan -out=tfplan
+          '''
         }
+      }
     }
+ 
+    stage('Apply') {
+      when { expression { return params.APPLY } }
+      steps {
+        input 'Approve apply?'
+        withCredentials([usernamePassword(
+            credentialsId: 'aws-creds', 
+            usernameVariable: 'AWS_ACCESS_KEY_ID', 
+            passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+ 
+          sh 'terraform apply -auto-approve tfplan'
+        }
+      }
+    }
+  }
+ 
+  post {
+    always { cleanWs() }
+  }
 }
  
