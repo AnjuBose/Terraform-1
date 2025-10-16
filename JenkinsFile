@@ -5,13 +5,9 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: 'aws-creds',
         usernameVariable: 'AWS_ACCESS_KEY_ID',
         passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) 
-    
-}
- 
-        AWS_ACCESS_KEY_ID     = credentials('aws-creds')      // Jenkins credential ID
-        AWS_SECRET_ACCESS_KEY = credentials('aws-creds')
-        AWS_DEFAULT_REGION     = 'ap-south-1'
     }
+    
+
  
     stages {
         stage('Checkout') {
