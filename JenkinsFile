@@ -1,0 +1,64 @@
+pipeline {
+    agent any
+ 
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('aws-creds')      // Jenkins credential ID
+        AWS_SECRET_ACCESS_KEY = credentials('aws-creds')
+        AWS_DEFAULT_REGION     = 'ap-south-1'
+    }
+ 
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Cloning repository...'
+                checkout scm
+            }
+        }
+ 
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init -input=false'
+            }
+        }
+ 
+        stage('Terraform Validate') {
+            steps {
+                sh 'terraform validate'
+            }
+        }
+ 
+        stage('Terraform Plan') {
+            steps {
+                sh 'terraform plan -out=tfplan'
+            }
+        }
+ 
+        stage('Terraform Apply') {
+            when {
+                expression { return params.APPLY == true }
+            }
+            steps {
+                input message: 'Approve deployment?', ok: 'Deploy'
+                sh 'terraform apply -auto-approve tfplan'
+            }
+        }
+ 
+        stage('Terraform Destroy') {
+            when {
+                expression { return params.DESTROY == true }
+            }
+            steps {
+                input message: 'Approve destroy?', ok: 'Destroy'
+                sh 'terraform destroy -auto-approve'
+            }
+        }
+    }
+ 
+    post {
+        always {
+            echo 'Cleaning up workspace...'
+            cleanWs()
+        }
+    }
+}
+ 
