@@ -19,7 +19,7 @@ module "web" {
   source        = "../../modules/ec2-instance"
   name          = "web-server"
   ami_id        = var.ami_id
-  instance_type = "t3.micro"
+  instance_type = "t2.micro"
   subnet_id     = aws_subnet.public.id
   ssh_cidr      = "0.0.0.0/0" # for demo only
   vpc_id = aws_vpc.this.id
